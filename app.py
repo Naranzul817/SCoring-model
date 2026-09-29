@@ -5,7 +5,9 @@
 Дараа нь: streamlit run app.py
 """
 
+import hmac
 import json
+import os
 from pathlib import Path
 
 import joblib
@@ -19,6 +21,29 @@ from train import (
 )
 
 st.set_page_config(page_title="Зээлийн оноо", page_icon="📊", layout="centered")
+
+
+# --- Нэвтрэлт ------------------------------------------------------------------
+# Нууц үгийг кодонд биш, APP_PASSWORD орчны хувьсагчид хадгална.
+# Тохируулаагүй бол аппыг нээхгүй (fail closed).
+def require_password():
+    expected = os.environ.get("APP_PASSWORD", "")
+    if not expected:
+        st.error("APP_PASSWORD тохируулаагүй тул апп хаалттай байна.")
+        st.stop()
+    if st.session_state.get("authenticated"):
+        return
+    with st.form("login"):
+        pw = st.text_input("Нууц үг", type="password")
+        if st.form_submit_button("Нэвтрэх"):
+            if hmac.compare_digest(pw.encode(), expected.encode()):
+                st.session_state["authenticated"] = True
+                st.rerun()
+            st.error("Нууц үг буруу байна.")
+    st.stop()
+
+
+require_password()
 
 
 @st.cache_resource
